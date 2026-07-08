@@ -1,0 +1,173 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import '../models/todo_model.dart';
+import '../services/api_service.dart';
+
+class TodoController extends GetxController {
+  final ApiService _apiService = ApiService();
+
+  final RxList<Todo> todoList = <Todo>[].obs;
+
+  final RxBool isLoading = false.obs;
+
+  final RxString errorMessage = ''.obs;
+
+  final TextEditingController taskController = TextEditingController();
+
+  @override
+  void onInit() {
+    super.onInit();
+    getAllTodos();
+  }
+
+  Future<void> getAllTodos() async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      final todos = await _apiService.getTodos();
+
+      todoList.assignAll(todos);
+    } catch (e) {
+      errorMessage.value = e.toString();
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> addTodo() async {
+    if (taskController.text.trim().isEmpty) {
+      Get.snackbar(
+        "Error",
+        "Task cannot be empty",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+
+      Todo todo = await _apiService.addTodo(
+        taskController.text.trim(),
+      );
+
+      todoList.insert(0, todo);
+
+      taskController.clear();
+
+      Get.back();
+
+      Get.snackbar(
+        "Success",
+        "Task Added Successfully",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> updateTodo(
+    Todo todo,
+    String newTask,
+  ) async {
+    try {
+      isLoading.value = true;
+
+      Todo updated = await _apiService.updateTodo(
+        todo.id,
+        newTask,
+        todo.completed,
+      );
+
+      int index = todoList.indexWhere(
+        (element) => element.id == todo.id,
+      );
+
+      if (index != -1) {
+        todoList[index] = updated;
+      }
+
+      Get.back();
+
+      Get.snackbar(
+        "Success",
+        "Task Updated",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> deleteTodo(int id) async {
+    try {
+      isLoading.value = true;
+
+      bool deleted = await _apiService.deleteTodo(id);
+
+      if (deleted) {
+        todoList.removeWhere(
+          (element) => element.id == id,
+        );
+
+        Get.snackbar(
+          "Success",
+          "Task Deleted",
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> toggleStatus(Todo todo) async {
+    try {
+      Todo updated = await _apiService.changeStatus(
+        todo.id,
+        !todo.completed,
+      );
+
+      int index = todoList.indexWhere(
+        (element) => element.id == todo.id,
+      );
+
+      if (index != -1) {
+        todoList[index] = updated;
+      }
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  @override
+  void onClose() {
+    taskController.dispose();
+    super.onClose();
+  }
+}
