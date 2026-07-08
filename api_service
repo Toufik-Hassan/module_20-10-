@@ -1,0 +1,110 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
+import '../models/todo_model.dart';
+
+class ApiService {
+  static const String baseUrl = "https://dummyjson.com";
+
+  // Get All Tasks
+  Future<List<Todo>> getTodos() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/todos"),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final todoResponse = TodoResponse.fromJson(data);
+      return todoResponse.todos;
+    } else {
+      throw Exception("Failed to load tasks");
+    }
+  }
+
+  // Add Task
+  Future<Todo> addTodo(String task) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/todos/add"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "todo": task,
+        "completed": false,
+        "userId": 1,
+      }),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return Todo.fromJson(
+        jsonDecode(response.body),
+      );
+    } else {
+      throw Exception("Failed to add task");
+    }
+  }
+
+  // Update Task
+  Future<Todo> updateTodo(
+    int id,
+    String task,
+    bool completed,
+  ) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/todos/$id"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "todo": task,
+        "completed": completed,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return Todo.fromJson(
+        jsonDecode(response.body),
+      );
+    } else {
+      throw Exception("Failed to update task");
+    }
+  }
+
+  // Change Status
+  Future<Todo> changeStatus(
+    int id,
+    bool completed,
+  ) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/todos/$id"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "completed": completed,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return Todo.fromJson(
+        jsonDecode(response.body),
+      );
+    } else {
+      throw Exception("Failed to change status");
+    }
+  }
+
+  // Delete Task
+  Future<bool> deleteTodo(int id) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/todos/$id"),
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+}
